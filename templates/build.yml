@@ -1,0 +1,33 @@
+parameters:
+  envName: 'test'
+  stageName: 'Test'
+  depends: 'Dev'  
+
+- stage: '$(stageName)'
+  displayName: 'Deploy to the $(stageName) environment'
+  dependsOn: $(depends)
+  #condition: eq(variables['Build.Reason'], 'Schedule')
+  jobs:
+  - deployment: Deploy
+    pool:
+      vmImage: 'Ubuntu-16.04'
+    environment: $(envName)
+    variables:
+    - group: 'Release'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - task: AzureWebApp@1
+            displayName: 'Azure App Service Deploy: website'
+            inputs:
+              azureSubscription: 'Resource Manager - Tailspin - Space Game'
+              appName: 
+                ${{ if eq(parameters.envName, 'test')}}:
+                  '$(WebAppNameTest)'
+                ${{ if eq(parameters.envName, 'staging')}}:
+                  '$(WebAppNameStaging)'  
+              package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'
+
